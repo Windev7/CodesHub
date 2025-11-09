@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- BAŞLIK GÜNCELLENDİ -->
+    <title>Codes Hub - Canlı Proje Platformu</title>
+    <!-- Tailwind CSS Yükle -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Özel renkler için Tailwind Yapılandırmasını Ayarlama
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': 'var(--primary-color)',
+                        'secondary': 'var(--secondary-color)',
+                        'bg-default': 'var(--bg-default)',
+                        'card-bg': 'var(--card-bg)',
+                        'text-color': 'var(--text-color)',
+                        'border-color': 'var(--border-color)',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Firebase SDK'ları Yükle -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, setDoc, onSnapshot, collection, query, serverTimestamp, deleteDoc, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Firebase global değişkenlerini ayarlama
+        let app, auth, db;
+        let userId = null;
+        let nickname = null; 
+        let isModerator = false;
+
+        // --- GLOBAL YAPILANDIRMA ---
+        // Moderatör isimleri
+        const MODERATOR_NICKNAMES = ["EmirSeyfOS", "ScratchyXPlus", "ScratchMaster"];
+        // Örnek yer tutucu kullanıcı adları
+        const EXAMPLE_NICKNAMES = [
+            "KodUstası", "PikselPilot", "OyunMeraklısı", "BlokYapıcı", 
+            "SanalKodcu", "VeriHayalperesti", "AlgoritmaKralı", "GelecekYapan",
+            "ProjeKoşucusu", "SiberYazılım", "DijitalGöçebe"
+        ];
+        
+        const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'codes-hub-default';
+        const FIREBASE_CONFIG = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const INITIAL_AUTH_TOKEN = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Genel koleksiyon yollarını almak için yardımcı program
+        const publicCollectionPath = (collectionName) => `/artifacts/${APP_ID}/public/data/${collectionName}`;
+        
+        // Rastgele mod olmayan yer tutucu almak için işlev
+        const getRandomPlaceholder = () => {
+            return EXAMPLE_NICKNAMES[Math.floor(Math.random() * EXAMPLE_NICKNAMES.length)];
+        };
+
+        // --- BAŞLATMA ---
+        const initFirebase = async () => {
+            if (!FIREBASE_CONFIG) {
+                console.error("Firebase yapılandırması eksik.");
+                document.getElementById('auth-status').textContent = "Hata: Firebase yapılandırması eksik.";
+                return;
+            }
+
+            try {
+                // setLogLevel('Debug'); // Hata ayıklama için etkinleştir
+                app = initializeApp(FIREBASE_CONFIG);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                let initialSignInPromise;
+                if (INITIAL_AUTH_TOKEN) {
+                    initialSignInPromise = signInWithCustomToken(auth, INITIAL_AUTH_TOKEN);
+                } else {
+                    initialSignInPromise = signInAnonymously(auth);
+                }
+                
+                await initialSignInPromise;
+                console.log("Firebase başlatıldı ve kullanıcı oturum açtı.");
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        // Kullanıcı adını Firestore'dan yükle
+                        const nicknameDoc = await getDocs(query(collection(db, publicCollectionPath('user_profiles')), where("uid", "==", userId)));
+                        
+                        if (!nicknameDoc.empty) {
+                            nickname = nicknameDoc.docs[0].data().nickname;
+                        } else {
+                             // Kullanıcı adı bulunamazsa modalı göster
+                             showNicknameModal();
+                        }
+                        
+                        // Başarılı kimlik doğrulama ve kullanıcı adı yüklemesinden sonra arayüzü ve dinleyicileri ayarla
+                        updateUI(user);
+                        fetchProjects();
+                        fetchChat();
+                        
+                    } else {
+                        userId = null;
+                        updateUI(null);
+                        console.log("Kullanıcı çıkış yaptı veya kimlik doğrulama başarısız oldu.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Başlatma Hatası:", error);
+                document.getElementById('auth-status').textContent = `Hata: Kimlik Doğrulama Başarısız. ${error.message}`;
+            }
+        };
+
+        const showNicknameModal = () => {
+             const modal = document.getElementById('nickname-modal');
+             const input = document.getElementById('nickname-input');
+             input.placeholder = `örn., ${getRandomPlaceholder()}`; // Rastgele yer tutucu ayarla
+             modal.classList.remove('hidden');
+        };
+
+        const saveNickname = async () => {
+            const input = document.getElementById('nickname-input');
+            const newNickname = input.value.trim();
+            
+            // Temel doğrulama
+            if (newNickname.length < 3 || newNickname.length > 20 || !/^[a-zA-Z0-9_]+$/.test(newNickname)) {
+                document.getElementById('nickname-error').textContent = 'Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece harf, rakam veya alt çizgi içermelidir.';
+                return;
+            }
+            
+            // Doğrulama geçerse hata mesajını temizle
+            document.getElementById('nickname-error').textContent = '';
+
+            // Moderatör isimlerini kontrol et (yalnızca dahili mantık)
+            isModerator = MODERATOR_NICKNAMES.includes(newNickname);
+            
+            try {
+                await setDoc(doc(db, publicCollectionPath('user_profiles'), userId), {
+                    uid: userId,
+                    nickname: newNickname,
+                    isModerator: isModerator,
+                    createdAt: serverTimestamp()
+                });
+                
+                nickname = newNickname;
+                document.getElementById('nickname-modal').classList.add('hidden');
+                updateUI(auth.currentUser);
+            } catch (e) {
+                console.error("Kullanıcı adı kaydetme hatası:", e);
+                document.getElementById('nickname-error').textContent = "Kullanıcı adı kaydedilirken bir hata oluştu.";
+            }
+        };
+
+        const updateUI = (user) => {
+            const statusEl = document.getElementById('auth-status');
+            const nicknameEl = document.getElementById('user-nickname-display');
+            const banBtn = document.getElementById('ban-user-btn');
+
+            if (user && nickname) {
+                isModerator = MODERATOR_NICKNAMES.includes(nickname);
+                
+                statusEl.textContent = `Kullanıcı Kimliği: ${userId}`;
+                nicknameEl.textContent = `Hoş geldiniz, ${nickname} ${isModerator ? '(MOD)' : ''}`;
+                
+                if (isModerator) {
+                    banBtn.classList.remove('hidden');
+                } else {
+                    banBtn.classList.add('hidden');
+                }
+                
+                // Sohbet girişindeki yer tutucuyu ayarla
+                document.getElementById('chat-input').placeholder = "Mesajınızı buraya yazın...";
+            } else {
+                statusEl.textContent = "Lütfen kullanıcı adınızı belirleyin.";
+                nicknameEl.textContent = "Çıkış Yapıldı";
+                banBtn.classList.add('hidden');
+                document.getElementById('chat-input').placeholder = "Sohbet etmek için kullanıcı adınızı belirleyin...";
+            }
+        };
+        
+        // --- PROJE GÖMME VE GÖNDERME ---
+        window.loadProject = () => {
+            const urlInput = document.getElementById('project-url-input');
+            const url = urlInput.value.trim();
+            const projectEmbed = document.getElementById('project-embed');
+            const submitBtn = document.getElementById('submit-project-btn');
+            
+            projectEmbed.innerHTML = '';
+            submitBtn.classList.add('hidden');
+            
+            const match = url.match(/scratch\.mit\.edu\/projects\/(\d+)\//) || url.match(/turbowarp\.org\/(\d+)/);
+            
+            if (match && match[1]) {
+                const projectId = match[1];
+                
+                // TurboWarp Gömülü Oynatıcısını Göster
+                projectEmbed.innerHTML = `
+                    <div class="p-6 bg-card-bg rounded-xl shadow-lg border border-border-color mb-4 transition duration-300 hover:shadow-xl">
+                        <h2 class="text-xl font-bold text-primary mb-3 border-b border-border-color pb-2">Proje Oynatıcı (TurboWarp)</h2>
+                        <iframe 
+                            src="https://turbowarp.org/${projectId}/embed" 
+                            width="100%" 
+                            height="400" 
+                            allowtransparency="true" 
+                            frameborder="0" 
+                            scrolling="no" 
+                            allowfullscreen
+                            class="rounded-lg shadow-inner bg-bg-default"
+                        ></iframe>
+                    </div>
+                    <div id="ai-summary-output" class="p-4 bg-secondary/10 text-secondary rounded-xl text-sm hidden"></div>
+                `;
+                document.getElementById('project-id-storage').value = projectId;
+                submitBtn.classList.remove('hidden');
+            } else {
+                projectEmbed.innerHTML = '<p class="text-secondary p-4 bg-card-bg rounded-xl border border-border-color">Lütfen geçerli bir Scratch veya TurboWarp proje URL\'si girin.</p>';
+            }
+        };
+        
+        // Özel onay işlevi (confirm() yerine)
+        const customConfirm = (message, callback) => {
+            const modal = document.getElementById('custom-confirm-modal');
+            const messageEl = document.getElementById('confirm-message');
+            const confirmBtn = document.getElementById('confirm-yes');
+            const cancelBtn = document.getElementById('confirm-no');
+
+            messageEl.textContent = message;
+            modal.classList.remove('hidden');
+
+            const handleConfirm = () => {
+                modal.classList.add('hidden');
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                callback(true);
+            };
+
+            const handleCancel = () => {
+                modal.classList.add('hidden');
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                callback(false);
+            };
+
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+        };
+        
+        // Özel uyarı işlevi (alert() yerine)
+        const customAlert = (message) => {
+            const modal = document.getElementById('custom-alert-modal');
+            const messageEl = document.getElementById('alert-message');
+            const closeBtn = document.getElementById('alert-ok');
+
+            messageEl.textContent = message;
+            modal.classList.remove('hidden');
+
+            const handleClose = () => {
+                modal.classList.add('hidden');
+                closeBtn.removeEventListener('click', handleClose);
+            };
+
+            closeBtn.addEventListener('click', handleClose);
+        };
+
+
+        window.submitProject = async () => {
+            if (!userId || !nickname) {
+                customAlert('Lütfen önce kullanıcı adınızı kaydedin.');
+                return;
+            }
+            
+            const title = document.getElementById('project-title-input').value.trim();
+            const description = document.getElementById('project-description-input').value.trim();
+            const projectId = document.getElementById('project-id-storage').value.trim();
+
+            if (!title || !description || !projectId) {
+                customAlert('Lütfen bir başlık, açıklama ve geçerli bir proje URL\'si girin.');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, publicCollectionPath('projects')), {
+                    projectId: projectId,
+                    title: title,
+                    description: description,
+                    authorUid: userId,
+                    authorNickname: nickname,
+                    createdAt: serverTimestamp(),
+                    summary: 'Özet bekleniyor...'
+                });
+                
+                // Formu temizle ve projeleri yeniden yükle (onSnapshot yeniden yüklemeyi halleder)
+                document.getElementById('project-title-input').value = '';
+                document.getElementById('project-description-input').value = '';
+                document.getElementById('project-url-input').value = '';
+                document.getElementById('project-embed').innerHTML = '';
+                document.getElementById('submit-project-btn').classList.add('hidden');
+                
+                customAlert('Proje başarıyla paylaşıldı!');
+            } catch (e) {
+                console.error("Proje kaydetme hatası:", e);
+                customAlert("Projeyi kaydederken bir hata oluştu.");
+            }
+        };
+        
+        // --- GERÇEK ZAMANLI PROJELER LİSTESİ ---
+        window.fetchProjects = () => {
+            if (!db) return;
+            const projectsRef = collection(db, publicCollectionPath('projects'));
+            const q = query(projectsRef);
+
+            onSnapshot(q, (snapshot) => {
+                const projectsContainer = document.getElementById('projects-list');
+                projectsContainer.innerHTML = '';
+
+                // Belgeleri zaman damgasına göre sırala
+                snapshot.docs.sort((a, b) => (b.data().createdAt?.seconds || 0) - (a.data().createdAt?.seconds || 0)).forEach(doc => {
+                    const project = doc.data();
+                    const el = document.createElement('div');
+                    el.className = 'bg-card-bg p-5 rounded-2xl shadow-md mb-4 border border-border-color hover:border-primary transition duration-300 hover:shadow-lg';
+                    el.innerHTML = `
+                        <h3 class="text-2xl font-extrabold text-text-color mb-1">${project.title}</h3>
+                        <p class="text-primary font-medium mb-2">Yazar: ${project.authorNickname}</p>
+                        <p class="text-text-color/70 mb-3">${project.description}</p>
+                        <div class="bg-bg-default/50 p-3 rounded-lg mt-3">
+                            <p class="text-sm font-semibold text-secondary">Yapay Zeka Özeti:</p>
+                            <p class="text-text-color/80 italic text-sm mt-1">${project.summary}</p>
+                        </div>
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <button onclick="window.loadProjectFromId('${project.projectId}')" class="primary-button font-semibold py-2 px-4 rounded-xl text-sm transition duration-200 transform hover:scale-[1.05] shadow-md">Projeyi Oyna</button>
+                            <button onclick="window.summarizeProject('${doc.id}', '${project.title.replace(/'/g, "\\'")}', '${project.description.replace(/'/g, "\\'")}')" class="secondary-button font-semibold py-2 px-4 rounded-xl text-sm transition duration-200 transform hover:scale-[1.05] shadow-md">YZ Özeti Oluştur</button>
+                        </div>
+                    `;
+                    projectsContainer.appendChild(el);
+                });
+            }, (error) => {
+                console.error("Projeler getirilirken hata:", error);
+            });
+        };
+
+        window.loadProjectFromId = (projectId) => {
+            const projectEmbed = document.getElementById('project-embed');
+            document.getElementById('project-url-input').value = `https://scratch.mit.edu/projects/${projectId}/`;
+            document.getElementById('submit-project-btn').classList.add('hidden');
+            
+            projectEmbed.innerHTML = `
+                <div class="p-6 bg-card-bg rounded-xl shadow-lg border border-border-color mb-4 transition duration-300 hover:shadow-xl">
+                    <h2 class="text-xl font-bold text-primary mb-3 border-b border-border-color pb-2">Proje Oynatıcı (TurboWarp)</h2>
+                    <iframe 
+                        src="https://turbowarp.org/${projectId}/embed" 
+                        width="100%" 
+                        height="400" 
+                        allowtransparency="true" 
+                        frameborder="0" 
+                        scrolling="no" 
+                        allowfullscreen
+                        class="rounded-lg shadow-inner bg-bg-default"
+                    ></iframe>
+                </div>
+            `;
+            // Gömülü alana kaydır
+            document.getElementById('project-embed').scrollIntoView({ behavior: 'smooth' });
+        };
+        
+        // --- SOHBET ODASI ---
+        
+        let bannedUids = [];
+
+        window.fetchBannedUsers = () => {
+            if (!db) return;
+            const bannedRef = collection(db, publicCollectionPath('banned_users'));
+            onSnapshot(bannedRef, (snapshot) => {
+                bannedUids = snapshot.docs.map(doc => doc.id);
+            }, (error) => {
+                console.error("Yasaklanan kullanıcılar getirilirken hata:", error);
+            });
+        };
+
+        window.fetchChat = () => {
+            if (!db) return;
+            window.fetchBannedUsers(); // Yasaklı listeyi önce yükle
+            
+            const chatRef = collection(db, publicCollectionPath('chat_messages'));
+            const q = query(chatRef); 
+
+            onSnapshot(q, (snapshot) => {
+                const chatContainer = document.getElementById('chat-messages');
+                chatContainer.innerHTML = '';
+                
+                snapshot.docs.sort((a, b) => a.data().createdAt?.seconds - b.data().createdAt?.seconds).forEach(doc => {
+                    const message = doc.data();
+                    const isBanned = bannedUids.includes(message.authorUid);
+                    const isMessageAuthorMod = MODERATOR_NICKNAMES.includes(message.authorNickname);
+
+                    const el = document.createElement('div');
+                    el.className = `p-3 my-2 rounded-xl transition duration-150 ${isBanned ? 'bg-red-500/10 border border-red-500 text-red-400' : 'bg-bg-default/50 border border-border-color hover:bg-bg-default'} shadow-sm`;
+
+                    const time = message.createdAt ? new Date(message.createdAt.toDate()).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : 'Şimdi';
+                    
+                    const banButton = isModerator && !isBanned ? 
+                        `<button onclick="window.handleBan('${message.authorUid}', '${message.authorNickname}')" class="ml-2 text-xs text-red-500 hover:text-red-700 font-medium hover:underline">(Yasakla)</button>` : 
+                        '';
+                    
+                    const nameStyle = isMessageAuthorMod ? 'text-secondary' : 'text-primary';
+                    const modTag = isMessageAuthorMod ? ' (MOD)' : '';
+                    
+                    el.innerHTML = `
+                        <div class="flex items-center mb-1">
+                            <span class="font-bold ${nameStyle}">${message.authorNickname}${modTag}</span>
+                            <span class="text-xs text-text-color/50 ml-2">${time}</span>
+                            ${banButton}
+                        </div>
+                        <p class="text-text-color text-sm break-words">${isBanned ? '[Bu kullanıcı yasaklanmıştır]' : message.text}</p>
+                    `;
+                    
+                    // Moderatör incelemesi için UID bilgisini ekle
+                    if (isModerator) {
+                         el.innerHTML += `<p class="text-xs text-text-color/40 mt-1 font-mono">UID: ${message.authorUid}</p>`;
+                    }
+                    
+                    chatContainer.appendChild(el);
+                });
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, (error) => {
+                console.error("Sohbet mesajları getirilirken hata:", error);
+            });
+        };
+        
+        window.sendChatMessage = async () => {
+            if (!userId || !nickname) {
+                customAlert('Lütfen önce kullanıcı adınızı kaydedin.');
+                return;
+            }
+            if (bannedUids.includes(userId)) {
+                customAlert('Yasaklısınız ve mesaj gönderemezsiniz.');
+                return;
+            }
+            
+            const inputEl = document.getElementById('chat-input');
+            const messageText = inputEl.value.trim();
+            
+            if (messageText === '') return;
+            
+            try {
+                await addDoc(collection(db, publicCollectionPath('chat_messages')), {
+                    text: messageText,
+                    authorUid: userId,
+                    authorNickname: nickname,
+                    createdAt: serverTimestamp()
+                });
+                inputEl.value = '';
+            } catch (e) {
+                console.error("Mesaj gönderme hatası:", e);
+                customAlert("Mesaj gönderilirken bir hata oluştu.");
+            }
+        };
+
+        window.handleBan = (uidToBan, nicknameToBan) => {
+            if (!isModerator) {
+                customAlert('Yalnızca moderatörler kullanıcıları yasaklayabilir.');
+                return;
+            }
+            
+            customConfirm(`${nicknameToBan} (${uidToBan}) adlı kullanıcıyı yasaklamak istediğinizden emin misiniz?`, async (confirmed) => {
+                if (confirmed) {
+                    try {
+                        // banned_users koleksiyonuna ekle
+                        await setDoc(doc(db, publicCollectionPath('banned_users'), uidToBan), {
+                            bannedBy: userId,
+                            bannedAt: serverTimestamp(),
+                            nickname: nicknameToBan
+                        });
+                        customAlert(`${nicknameToBan} başarıyla yasaklandı.`);
+                    } catch (e) {
+                        console.error("Yasaklama hatası:", e);
+                        customAlert("Yasaklama işlemi sırasında bir hata oluştu.");
+                    }
+                }
+            });
+        };
+        
+        window.handleUnban = (uidToUnban) => {
+            if (!isModerator) {
+                customAlert('Yalnızca moderatörler kullanıcıları yasaklayabilir.');
+                return;
+            }
+            if (uidToUnban.trim() === '') {
+                 customAlert('Lütfen yasağı kaldırmak için bir Kullanıcı Kimliği (UID) girin.');
+                 return;
+            }
+            
+            customConfirm(`Bu kullanıcı kimliğinin (${uidToUnban}) yasağını kaldırmak istediğinizden emin misiniz?`, async (confirmed) => {
+                if (confirmed) {
+                    try {
+                        // banned_users koleksiyonundan kaldır
+                        await deleteDoc(doc(db, publicCollectionPath('banned_users'), uidToUnban));
+                        customAlert(`Kullanıcının yasağı başarıyla kaldırıldı.`);
+                        document.getElementById('unban-uid-input').value = '';
+                    } catch (e) {
+                        console.error("Yasak kaldırma hatası:", e);
+                        customAlert("Yasak kaldırma işlemi sırasında bir hata oluştu.");
+                    }
+                }
+            });
+        };
+
+
+        // --- YZ ÖZETLEYİCİ ---
+        window.summarizeProject = async (docId, title, description) => {
+            const summaryDiv = document.getElementById('ai-summary-output');
+            summaryDiv.classList.remove('hidden');
+            summaryDiv.innerHTML = `<div class="flex items-center text-primary font-medium"><svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Yapay Zeka Özeti Oluşturuluyor... Lütfen bekleyin.</div>`;
+
+            const systemPrompt = "Sen bir Scratch proje paylaşım platformu için yararlı bir yapay zeka asistanısın. Sağlanan proje başlığını ve açıklamasını tek, ilgi çekici bir paragrafta özetle. Teşvik edici ve eğitici bir dil kullan.";
+            const userQuery = `Proje Başlığı: ${title}\nProje Açıklaması: ${description}\n\nBu Scratch projesini topluluk için özetle:`;
+            
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+            };
+            
+            let summaryText = "Özet oluşturulamadı.";
+            
+            const fetchWithRetry = async (url, options, maxRetries = 3) => {
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (response.status === 429 && i < maxRetries - 1) {
+                            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue;
+                        }
+                        if (!response.ok) throw new Error(`HTTP hatası! Durum: ${response.status}`);
+                        return response.json();
+                    } catch (error) {
+                        console.error(`Getirme denemesi ${i + 1} başarısız oldu:`, error);
+                        if (i === maxRetries - 1) throw error;
+                    }
+                }
+            };
+            
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const candidate = response.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    summaryText = candidate.content.parts[0].text;
+                }
+            } catch (error) {
+                console.error("API Çağrısı Hatası:", error);
+                summaryText = "Özet oluşturulurken bir ağ veya API hatası oluştu.";
+            }
+
+            // Yeni özeti Firestore belgesine kaydet
+            try {
+                await setDoc(doc(db, publicCollectionPath('projects'), docId), { summary: summaryText }, { merge: true });
+            } catch (e) {
+                 console.error("Firestore özet güncelleme hatası:", e);
+                 customAlert("Bir özet oluşturuldu ancak veritabanına kaydedilemedi.");
+            }
+            
+            // Görüntüleme alanını güncelle
+            summaryDiv.innerHTML = `
+                <h4 class="font-semibold text-secondary mb-2">Yapay Zeka Özeti:</h4>
+                <p class="text-text-color/80">${summaryText}</p>
+            `;
+            
+            // fetchProjects içindeki onSnapshot dinleyicisi listeyi otomatik olarak güncelleyecektir.
+        };
+
+        // Yükleme sırasında başlat
+        window.onload = initFirebase;
+    </script>
+    <style>
+        /* BASE & DARK MODE VARIABLES (DEFAULT TO LIGHT) */
+        :root {
+            --bg-default: #F9FAFB;   /* Very light gray */
+            --card-bg: #FFFFFF;      /* White Card Background */
+            --text-color: #1F2937;   /* Dark Text */
+            --primary-color: #3B82F6; /* Blue-500 */
+            --secondary-color: #F97316; /* Orange-500 (Accent) */
+            --border-color: #E5E7EB; /* Light Border/Divider */
+            --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.3); /* Primary Glow */
+            --scroll-thumb: #3B82F6;
+        }
+
+        /* DARK MODE OVERRIDE */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-default: #111827; /* Dark Blue/Gray */
+                --card-bg: #1F2937;   /* Darker Card Background */
+                --text-color: #F9FAFB; /* Light Text */
+                --primary-color: #60A5FA; /* Light Blue-400 */
+                --secondary-color: #FBBF24; /* Amber-400 (Accent) */
+                --border-color: #374151; /* Dark Border/Divider */
+                --shadow-glow: 0 0 15px rgba(96, 165, 250, 0.2); /* Muted Glow */
+                --scroll-thumb: #60A5FA;
+            }
+        }
+
+        /* Dinamik renkleri uygula */
+        body {
+            background-color: var(--bg-default);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .header-style {
+            background-color: var(--card-bg);
+            border-bottom: 4px solid var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* Açık tema için daha hafif gölge */
+        }
+
+        .input-style {
+            background-color: var(--bg-default); /* Girişler sayfa BG'sinden biraz daha koyu */
+            border-color: var(--border-color);
+            color: var(--text-color);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .primary-button {
+            background-color: var(--primary-color);
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+            color: white; 
+            font-weight: 600;
+        }
+        .primary-button:hover {
+            background-color: color-mix(in srgb, var(--primary-color) 90%, black);
+        }
+        .primary-button:active {
+            box-shadow: none;
+            transform: scale(0.98);
+        }
+        
+        .secondary-button {
+            background-color: var(--secondary-color);
+            box-shadow: 0 4px 6px rgba(249, 115, 22, 0.2);
+            color: white;
+            font-weight: 600;
+        }
+        .secondary-button:hover {
+            background-color: color-mix(in srgb, var(--secondary-color) 90%, black);
+        }
+        .secondary-button:active {
+            box-shadow: none;
+            transform: scale(0.98);
+        }
+
+        /* Sohbet için Özel Kaydırma Çubuğu */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: var(--border-color); /* Daha açık iz */
+            border-radius: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--scroll-thumb);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: color-mix(in srgb, var(--scroll-thumb) 80%, black);
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Özel Uyarı Modalı (alert() yerine) -->
+    <div id="custom-alert-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+        <div class="bg-card-bg p-6 rounded-xl shadow-2xl w-full max-w-sm border border-primary/50">
+            <h3 class="text-xl font-bold text-primary mb-3">Bildirim</h3>
+            <p id="alert-message" class="text-text-color mb-4"></p>
+            <button id="alert-ok" class="w-full primary-button py-2 rounded-lg transition duration-200">Tamam</button>
+        </div>
+    </div>
+
+    <!-- Özel Onay Modalı (confirm() yerine) -->
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+        <div class="bg-card-bg p-6 rounded-xl shadow-2xl w-full max-w-sm border border-secondary/50">
+            <h3 class="text-xl font-bold text-secondary mb-3">Onay Gerekiyor</h3>
+            <p id="confirm-message" class="text-text-color mb-4"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirm-no" class="bg-border-color hover:bg-border-color/80 text-text-color font-semibold py-2 px-4 rounded-lg transition duration-200">İptal</button>
+                <button id="confirm-yes" class="secondary-button py-2 px-4 rounded-lg transition duration-200">Onayla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kullanıcı Adı Modalı -->
+    <div id="nickname-modal" class="hidden fixed inset-0 bg-bg-default bg-opacity-95 z-50 flex items-center justify-center p-4">
+        <div class="bg-card-bg p-8 rounded-2xl shadow-2xl w-full max-w-md border-2 border-primary/50">
+            <h2 class="text-3xl font-extrabold text-primary mb-4">Kullanıcı Adınızı Belirleyin</h2>
+            <p class="text-text-color/70 mb-6">Bu, projelerinizde ve sohbette görünecektir. Eğer bir Codes Hub yetkilisiyseniz, lütfen atanmış kullanıcı adınızı kullanın.</p>
+            <input 
+                type="text" 
+                id="nickname-input" 
+                maxlength="20"
+                class="w-full p-4 rounded-xl input-style focus:ring-primary focus:border-primary shadow-inner border"
+            >
+            <p id="nickname-error" class="text-red-500 text-sm mt-2 h-5"></p>
+            <button onclick="saveNickname()" class="mt-4 w-full primary-button font-bold py-3 rounded-xl transition duration-300 transform hover:scale-[1.01] shadow-lg">
+                Kaydet ve Giriş Yap
+            </button>
+        </div>
+    </div>
+    
+    <!-- Başlık (Header) -->
+    <header class="header-style sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <!-- LOGO REFERANSI -->
+                <!-- LOGO METNİ, logodan gelen tekrarı önlemek için kaldırıldı -->
+                <img src="logo.svg" alt="Codes Hub Logosu" class="h-10 w-auto">
+            </div>
+            <div class="text-right flex items-center space-x-4">
+                <div class="hidden sm:block">
+                    <p id="user-nickname-display" class="font-bold text-lg text-secondary"></p>
+                    <!-- UID hata ayıklama ve görünürlük için burada gösterilir -->
+                    <p id="auth-status" class="text-xs text-text-color/50 mt-1 font-mono">Yükleniyor...</p> 
+                </div>
+                <button id="ban-user-btn" class="hidden bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2 px-4 rounded-full transition duration-150 transform hover:scale-105 shadow-md">
+                    <a href="#moderator-tools">MOD Araçları</a>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+        
+        <!-- Sol Sütun: Proje Gönderimi ve Akışı -->
+        <section class="lg:col-span-2 space-y-10">
+            
+            <!-- Proje Gönderme Paneli -->
+            <div class="bg-card-bg p-8 rounded-3xl shadow-xl border border-border-color/70 transition duration-300 hover:shadow-2xl">
+                <h2 class="text-3xl font-extrabold text-primary mb-6 border-b border-border-color pb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Yeni Proje Paylaş
+                </h2>
+                
+                <input type="hidden" id="project-id-storage">
+                
+                <div class="mb-5">
+                    <label for="project-url-input" class="block text-sm font-medium text-text-color/80 mb-2">Scratch / TurboWarp URL'si:</label>
+                    <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                        <input 
+                            type="text" 
+                            id="project-url-input" 
+                            placeholder="https://scratch.mit.edu/projects/123456789/" 
+                            class="flex-grow p-4 rounded-xl input-style focus:ring-secondary focus:border-secondary shadow-inner border"
+                        >
+                        <button onclick="loadProject()" class="secondary-button font-semibold py-3 px-6 rounded-xl transition duration-200 transform hover:scale-[1.03] whitespace-nowrap shadow-lg">
+                            Projeyi Yükle
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-5">
+                    <label for="project-title-input" class="block text-sm font-medium text-text-color/80 mb-2">Proje Başlığı:</label>
+                    <input 
+                        type="text" 
+                        id="project-title-input" 
+                        placeholder="Harika Platformer Oyunum" 
+                        class="w-full p-4 rounded-xl input-style focus:ring-primary focus:border-primary shadow-inner border"
+                    >
+                </div>
+
+                <div class="mb-8">
+                    <label for="project-description-input" class="block text-sm font-medium text-text-color/80 mb-2">Açıklama:</label>
+                    <textarea 
+                        id="project-description-input" 
+                        rows="3" 
+                        placeholder="Bu oyunda uzaylılardan kaçıyorsunuz. Hareket etmek için WASD kullanın." 
+                        class="w-full p-4 rounded-xl input-style focus:ring-primary focus:border-primary shadow-inner border"
+                    ></textarea>
+                </div>
+                
+                <button 
+                    id="submit-project-btn" 
+                    onclick="submitProject()" 
+                    class="hidden w-full primary-button font-extrabold py-3 rounded-xl transition duration-200 transform hover:scale-[1.01] shadow-2xl"
+                >
+                    Codes Hub'da Paylaş
+                </button>
+            </div>
+            
+            <!-- Proje Gömülü Alanı -->
+            <div id="project-embed">
+                <p class="p-6 bg-card-bg rounded-2xl text-text-color/70 border border-border-color shadow-md">
+                    Bir Scratch veya TurboWarp proje URL'si girin ve önizlemeyi burada görmek için 'Projeyi Yükle'ye tıklayın.
+                </p>
+            </div>
+
+
+            <!-- Proje Akışı -->
+            <div class="bg-card-bg p-8 rounded-3xl shadow-xl border border-border-color/70">
+                <h2 class="text-3xl font-extrabold text-primary mb-6 border-b border-border-color pb-4 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                    Topluluk Projeleri Akışı
+                </h2>
+                <div id="projects-list">
+                    <p class="text-text-color/70">Projeler yükleniyor...</p>
+                </div>
+            </div>
+            
+            <!-- Moderatör Bölümü -->
+            <div id="moderator-tools" class="bg-red-500/10 p-8 rounded-3xl shadow-xl border-2 border-red-500/70">
+                <h2 class="text-3xl font-extrabold text-red-500 mb-6 border-b border-red-500/50 pb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    Moderatör Araçları (Yalnızca Yönetici)
+                </h2>
+                <p class="text-text-color/70 mb-4">Yasağı kaldırmak için aşağıya bir Kullanıcı Kimliği (UID) girin.</p>
+                
+                <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                    <input 
+                        type="text" 
+                        id="unban-uid-input" 
+                        placeholder="Yasağı kaldırılacak kullanıcının UID'si" 
+                        class="flex-grow p-4 rounded-xl input-style focus:ring-red-500 focus:border-red-500 shadow-inner border"
+                    >
+                    <button onclick="window.handleUnban(document.getElementById('unban-uid-input').value)" class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold py-3 px-6 rounded-xl transition duration-200 transform hover:scale-[1.03] whitespace-nowrap shadow-lg shadow-red-500/30">
+                        Kullanıcının Yasağını Kaldır
+                    </button>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Sağ Sütun: Sohbet Odası -->
+        <section class="lg:col-span-1">
+            <div class="bg-card-bg p-6 rounded-3xl shadow-xl border-2 border-secondary/50 flex flex-col h-[75vh] lg:h-[85vh]">
+                <h2 class="text-2xl font-extrabold text-secondary mb-4 border-b border-border-color pb-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    Topluluk Sohbeti
+                </h2>
+                
+                <!-- Sohbet Mesajları -->
+                <div id="chat-messages" class="flex-grow overflow-y-auto custom-scrollbar mb-4 p-3 bg-bg-default rounded-xl shadow-inner border border-border-color">
+                    <p class="text-text-color/50 text-center">Mesajlar yükleniyor...</p>
+                </div>
+                
+                <!-- Sohbet Girişi -->
+                <div class="mt-auto">
+                    <div class="flex space-x-2">
+                        <input 
+                            type="text" 
+                            id="chat-input" 
+                            placeholder="Sohbet etmek için kullanıcı adınızı belirleyin..." 
+                            onkeydown="if(event.key === 'Enter') sendChatMessage()"
+                            class="flex-grow p-3 rounded-xl input-style focus:ring-primary focus:border-primary shadow-inner border"
+                        >
+                        <button onclick="sendChatMessage()" class="primary-button font-semibold py-3 px-6 rounded-xl transition duration-150 transform hover:scale-[1.01]">
+                            Gönder
+                        </button>
+                    </div>
+                    <p class="text-xs text-text-color/50 mt-2">Mesaj göndermek için bir kullanıcı adı belirlemelisiniz.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-card-bg mt-10 py-6 text-center text-text-color/60 text-sm border-t border-border-color">
+        <p>Codes Hub - Topluluk için İnşa Edildi.</p>
+        <p class="mt-1">Tüm hakları saklıdır. © 2025</p>
+    </footer>
+
+</body>
+</html>
