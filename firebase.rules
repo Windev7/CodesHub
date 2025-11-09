@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+match /databases/{database}/documents {
+
+// --- ARTIFACTS ROOT ---
+// This top-level match ensures all application data is grouped under a unique appId.
+match /artifacts/{appId} {
+
+// --- PUBLIC DATA (Shared across all users) ---
+// This path is used for public collections like 'chat', 'projects', and 'moderation'.
+match /public/data/{collection}/{document} {
+// Allows any authenticated user to read the data.
+allow read: if request.auth != null;
+
+// Allows any authenticated user to create, update, or delete data in these public collections.
+// NOTE: In a real app, you would add more validation (e.g., checking field types, max length).
+allow write: if request.auth != null;
+
+
+}
+
+// --- USER DATA (Private to each user - not used in this app but good practice) ---
+// This is for private, user-specific data (e.g., user preferences).
+match /users/{userId}/{documents=**} {
+// Only allow a user to read/write their own data.
+allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+}
+
+}
+}
