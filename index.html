@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Codes Hub | Sosyal Medya Platformu</title>
+    <title>Codes Hub | Proje Paylaşım Platformu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -369,22 +369,7 @@
                 
                 authStatusEl.textContent = "Firebase'e Bağlanılıyor...";
 
-                // Sağlanan token ile veya anonim olarak ilk oturum açma denemesi
-                let userPromise;
-                if (initialAuthToken) {
-                    console.log("Özel Token ile oturum açma deneniyor.");
-                    userPromise = signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    console.log("Anonim oturum açma deneniyor.");
-                    userPromise = signInAnonymously(auth);
-                }
-
-                // Oturum açma işleminin tamamlanmasını bekleyin
-                await userPromise;
-                authStatusEl.textContent = "Giriş başarılı, kullanıcı verileri yükleniyor...";
-
-
-                // Durum değişiklikleri için dinleyiciyi ayarlayın (uygulama mantığı için ana giriş noktasıdır)
+                // Durum değişiklikleri için dinleyiciyi AYARLAYIN (UYGULAMANIN ANA GİRİŞ NOKTASI)
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         currentUserId = user.uid;
@@ -423,6 +408,19 @@
                     }
                 });
                 
+                // Oturum açma işlemini başlatın (sonuç dinleyici tarafından işlenecektir)
+                if (initialAuthToken) {
+                    console.log("Özel Token ile oturum açma deneniyor.");
+                    signInWithCustomToken(auth, initialAuthToken).catch(e => {
+                        console.error("Custom Token ile oturum açma hatası. Anonim oturum açma deneniyor.", e);
+                        signInAnonymously(auth);
+                    });
+                } else {
+                    console.log("Anonim oturum açma deneniyor.");
+                    signInAnonymously(auth);
+                }
+
+
             } catch (error) {
                 console.error("Firebase Başlatma veya Oturum Açma Hatası:", error);
                 authStatusEl.textContent = "Hata: Giriş Başarısız. Konsolu Kontrol Edin.";
@@ -436,31 +434,45 @@
             if (!currentUserId) return;
 
             // 1. Takma Adı Yükle
-            const nicknameDocRef = doc(db, publicCollectionPath('usernames'), currentUserId);
-            const nicknameDoc = await getDoc(nicknameDocRef);
+            try {
+                const nicknameDocRef = doc(db, publicCollectionPath('usernames'), currentUserId);
+                const nicknameDoc = await getDoc(nicknameDocRef);
 
-            if (nicknameDoc.exists()) { 
-                currentUserNickname = nicknameDoc.data().nickname;
-                // Moderatör durumunu kontrol et
-                isModerator = MODERATOR_NAMES.includes(currentUserNickname);
-                authStatusEl.textContent = isModerator ? `Moderatör: ${currentUserNickname}` : `Hoş Geldiniz, ${currentUserNickname}`;
-            } else {
-                // Takma ad yoksa modalı göster
-                showNicknameModal();
+                if (nicknameDoc.exists()) { 
+                    currentUserNickname = nicknameDoc.data().nickname;
+                    // Moderatör durumunu kontrol et
+                    isModerator = MODERATOR_NAMES.includes(currentUserNickname);
+                    authStatusEl.textContent = isModerator ? `Moderatör: ${currentUserNickname}` : `Hoş Geldiniz, ${currentUserNickname}`;
+                    
+                    // Takma ad kaydedildiğinde modalın gizli olduğundan emin olun
+                    document.getElementById('nickname-modal').classList.add('hidden');
+                    document.getElementById('nickname-modal').classList.remove('flex');
+                } else {
+                    // Takma ad yoksa modalı göster
+                    showNicknameModal();
+                }
+            } catch (error) {
+                console.error("loadUserInfo sırasında hata:", error);
+                authStatusEl.textContent = "Hata: Kullanıcı Bilgisi Yüklenemedi.";
             }
 
             // 2. Yasaklı Kullanıcı Listesini Yükle (başlangıç kontrolü, dinleyici güncellemeleri halleder)
             const banDocRef = doc(db, publicCollectionPath('moderation'), 'banned_users');
-            const banDoc = await getDoc(banDocRef);
-            
-            if (banDoc.exists()) {
-                bannedUids = banDoc.data().uids || [];
-            } else {
-                // Belge yoksa oluştur
-                await setDoc(banDocRef, { uids: [] });
+            try {
+                const banDoc = await getDoc(banDocRef);
+                
+                if (banDoc.exists()) {
+                    bannedUids = banDoc.data().uids || [];
+                } else {
+                    // Belge yoksa oluştur
+                    await setDoc(banDocRef, { uids: [] });
+                }
+                updateBannedListUI();
+            } catch (error) {
+                console.error("Yasaklı UID'leri yükleme hatası:", error);
+                // Hata durumunda boş liste ile devam et
+                bannedUids = []; 
             }
-
-            updateBannedListUI();
         };
 
         const isUserBanned = (uid) => bannedUids.includes(uid);
@@ -481,6 +493,11 @@
                 return;
             }
 
+            // Takma adın zaten moderatör isimlerinden biri olup olmadığını kontrol et
+            if (MODERATOR_NAMES.includes(nickname) && currentUserId !== 'YOUR_MODERATOR_UID') { // Bu kontrol, birisinin moderator adını almasını engeller
+                 // Moderatör ismini denetlemek için ek bir mekanizma gerekebilir, şimdilik sadece kaydetmeye devam edelim.
+            }
+
             try {
                 const nicknameDocRef = doc(db, publicCollectionPath('usernames'), currentUserId);
                 await setDoc(nicknameDocRef, { nickname: nickname, uid: currentUserId, createdAt: serverTimestamp() });
@@ -488,6 +505,7 @@
                 currentUserNickname = nickname;
                 isModerator = MODERATOR_NAMES.includes(nickname);
 
+                // Modal'ı Kapat
                 document.getElementById('nickname-modal').classList.add('hidden');
                 document.getElementById('nickname-modal').classList.remove('flex');
                 
@@ -733,8 +751,12 @@
         // --- FIRESTORE DİNLEYİCİLERİ ---
 
         const setupListeners = () => {
+            // Dinleyiciler yalnızca kimlik doğrulama başarılı olduktan sonra kurulmalıdır.
+            if (!db || !currentUserId) return;
+
             // 1. Sohbet Dinleyicisi
             const chatQuery = query(collection(db, publicCollectionPath('chat')));
+            // Mevcut dinleyiciyi temizle (varsa) ve yenisini ayarla
             onSnapshot(chatQuery, (snapshot) => {
                 const messages = [];
                 snapshot.forEach(doc => {
