@@ -88,14 +88,17 @@
                         userId = user.uid;
                         // Kullanıcı adını Firestore'dan yükle
                         const nicknameDoc = await getDocs(query(collection(db, publicCollectionPath('user_profiles')), where("uid", "==", userId)));
-                        
-                        if (!nicknameDoc.empty) {
-                            nickname = nicknameDoc.docs[0].data().nickname;
-                        } else {
-                             // Kullanıcı adı bulunamazsa modalı göster
-                             showNicknameModal();
-                        }
-                        
+                       // Inside the onAuthStateChanged callback:
+// ...
+if (!nicknameDoc.empty) {
+    nickname = nicknameDoc.docs[0].data().nickname;
+} 
+// --- ÖNEMLİ DÜZENLEME: Kullanıcı adı yoksa modalı göster ---
+else if (user.isAnonymous) { // Sadece anonim giriş yaptıysa ve takma adı yoksa göster
+    showNicknameModal();
+}
+// ...
+
                         // Başarılı kimlik doğrulama ve kullanıcı adı yüklemesinden sonra arayüzü ve dinleyicileri ayarla
                         updateUI(user);
                         fetchProjects();
