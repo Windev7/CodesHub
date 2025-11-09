@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Codes Hub | Proje Paylaşım Platformu</title>
+    <title>Codes Hub | Scratchten Daha İyi Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
-        /* Renk Değişkenleri - Light Theme (Default) */
+        /* Color Variables - Light Theme (Default) */
         :root {
-            --primary-color: #3b82f6; /* Mavi */
-            --secondary-color: #f97316; /* Turuncu */
+            --primary-color: #3b82f6; /* Blue */
+            --secondary-color: #f97316; /* Orange */
             --text-default: #1f2937;
             --text-secondary: #4b5563;
             --bg-default: #f9fafb;
@@ -22,11 +22,11 @@
             --shadow-glow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
         }
 
-        /* Renk Değişkenleri - Dark Theme */
+        /* Color Variables - Dark Theme */
         @media (prefers-color-scheme: dark) {
             :root {
-                --primary-color: #38bdf8; /* Açık Mavi */
-                --secondary-color: #f97316; /* Turuncu */
+                --primary-color: #38bdf8; /* Light Blue */
+                --secondary-color: #f97316; /* Orange */
                 --text-default: #f3f4f6;
                 --text-secondary: #9ca3af;
                 --bg-default: #1f2937;
@@ -83,10 +83,10 @@
             transform: scale(1.02);
         }
 
-        /* Scratch Player için özel stil (responsiveness) */
+        /* Scratch Player styles */
         #scratch-player-container {
             width: 100%;
-            padding-top: 75%; /* 4:3 en boy oranı (480/640 = 0.75) */
+            padding-top: 75%; /* 4:3 aspect ratio (480/640 = 0.75) */
             position: relative;
             background-color: var(--bg-default);
         }
@@ -100,7 +100,7 @@
             border-radius: 0.75rem;
         }
 
-        /* Modal Stili */
+        /* Modal Styles */
         .modal-overlay {
             background-color: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(5px);
@@ -116,122 +116,122 @@
 </head>
 <body class="min-h-screen">
 
-    <!-- Ana Konteyner -->
+    <!-- Main Container -->
     <div id="app-container" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
-        <!-- Başlık ve Durum Çubuğu -->
+        <!-- Header and Status Bar -->
         <header class="flex flex-col sm:flex-row justify-between items-center mb-8 pb-4 border-b border-border-color">
             <div class="flex items-center space-x-3">
                 <img src="logo.svg" alt="Codes Hub Logo" class="h-10 w-auto">
             </div>
             <div class="mt-4 sm:mt-0 text-right text-sm font-medium text-text-secondary flex items-center space-x-3">
-                <span id="auth-status" class="text-xs text-secondary-color font-bold">Yükleniyor...</span>
+                <span id="auth-status" class="text-xs text-secondary-color font-bold">Loading...</span>
                 <span id="user-info" class="p-1 rounded-md bg-primary-color/10 text-primary-color text-xs">
-                    Kullanıcı ID: Yükleniyor...
+                    User ID: Loading...
                 </span>
             </div>
         </header>
 
-        <!-- Ana İçerik Gridi -->
+        <!-- Main Content Grid -->
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-            <!-- Sol Sütun: Proje Yükleme ve Önizleme -->
+            <!-- Left Column: Project Upload and Preview -->
             <div class="lg:col-span-2 space-y-8">
-                <!-- Proje Yükleme Formu -->
+                <!-- Project Upload Form -->
                 <div class="card p-6 rounded-2xl">
                     <h2 class="text-xl font-bold text-primary-color mb-4 flex items-center">
-                        <i data-lucide="upload" class="w-6 h-6 mr-3"></i>Yeni Proje Paylaş
+                        <i data-lucide="upload" class="w-6 h-6 mr-3"></i>Share New Project
                     </h2>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium mb-1">Scratch / TurboWarp URL'si:</label>
+                            <label class="block text-sm font-medium mb-1">Scratch / TurboWarp URL:</label>
                             <div class="flex space-x-2">
-                                <input type="text" id="project-url" placeholder="Örn: https://scratch.mit.edu/projects/123456789/"
+                                <input type="text" id="project-url" placeholder="E.g.: https://scratch.mit.edu/projects/123456789/"
                                        class="input-field w-full p-2.5 rounded-xl text-sm">
                                 <button id="load-project-btn" class="btn-primary text-white font-semibold py-2.5 px-6 rounded-xl whitespace-nowrap" onclick="loadProject()">
-                                    Projeyi Yükle
+                                    Load Project
                                 </button>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Proje Başlığı:</label>
-                            <input type="text" id="project-title" placeholder="Harika Platformer Oyunum"
+                            <label class="block text-sm font-medium mb-1">Project Title:</label>
+                            <input type="text" id="project-title" placeholder="My Awesome Platformer Game"
                                    class="input-field w-full p-2.5 rounded-xl text-sm">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium mb-1">Açıklama:</label>
-                            <textarea id="project-description" rows="3" placeholder="Bu oyunda uzaylılardan kaçıyorsunuz. Hareket etmek için WASD kullanın."
+                            <label class="block text-sm font-medium mb-1">Description:</label>
+                            <textarea id="project-description" rows="3" placeholder="In this game, you escape aliens. Use WASD to move."
                                       class="input-field w-full p-2.5 rounded-xl text-sm resize-none"></textarea>
                         </div>
                         <button id="share-project-btn" class="btn-secondary text-white font-bold py-3 w-full rounded-xl mt-4" onclick="shareProject()" disabled>
-                            Codes Hub'da Paylaş
+                            Share on Codes Hub
                         </button>
                     </div>
                 </div>
 
-                <!-- Proje Önizleme -->
+                <!-- Project Preview -->
                 <div class="card p-4 rounded-2xl">
                     <h2 class="text-xl font-bold text-primary-color mb-4 flex items-center">
-                        <i data-lucide="monitor-play" class="w-6 h-6 mr-3"></i>Proje Önizleme
+                        <i data-lucide="monitor-play" class="w-6 h-6 mr-3"></i>Project Preview
                     </h2>
                     <div id="scratch-player-container" class="bg-gray-100 dark:bg-gray-800 rounded-xl overflow-hidden shadow-inner">
                         <p id="player-placeholder" class="absolute inset-0 flex items-center justify-center text-text-secondary/70 text-center p-8">
-                            Yüklemek için yukarıdaki alana bir Scratch/TurboWarp URL'si girin ve 'Projeyi Yükle'ye tıklayın.
+                            Enter a Scratch/TurboWarp URL above and click 'Load Project' to see the preview.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Sağ Sütun: Sohbet ve Projeler Akışı -->
+            <!-- Right Column: Chat and Projects Feed -->
             <div class="lg:col-span-1 space-y-8">
 
-                <!-- Topluluk Sohbeti -->
+                <!-- Community Chat -->
                 <div class="card p-6 rounded-2xl">
                     <h2 class="text-xl font-bold text-secondary-color mb-4 flex items-center">
-                        <i data-lucide="message-square" class="w-6 h-6 mr-3"></i>Topluluk Sohbeti
+                        <i data-lucide="message-square" class="w-6 h-6 mr-3"></i>Community Chat
                     </h2>
                     <div id="chat-messages" class="h-64 overflow-y-auto space-y-3 p-3 rounded-xl bg-bg-default border border-border-color mb-4 text-sm">
-                        <!-- Mesajlar buraya yüklenecek -->
-                        <p class="text-text-secondary/80 italic text-center">Mesajlar yükleniyor...</p>
+                        <!-- Messages will load here -->
+                        <p class="text-text-secondary/80 italic text-center">Messages loading...</p>
                     </div>
                     <div class="flex space-x-2">
-                        <input type="text" id="chat-input" placeholder="Bir mesaj yazın..."
+                        <input type="text" id="chat-input" placeholder="Type a message..."
                                class="input-field w-full p-2.5 rounded-xl text-sm" disabled>
                         <button id="send-chat-btn" class="btn-primary text-white font-semibold py-2.5 px-6 rounded-xl whitespace-nowrap" onclick="sendMessage()" disabled>
-                            Gönder
+                            Send
                         </button>
                     </div>
-                    <p id="chat-error" class="text-xs mt-2 text-text-secondary">Sohbet göndermek için bir kullanıcı adı belirlemelisiniz.</p>
+                    <p id="chat-error" class="text-xs mt-2 text-text-secondary">You must set a nickname to chat.</p>
                 </div>
 
-                <!-- Paylaşılan Projeler Akışı -->
+                <!-- Shared Projects Feed -->
                 <div class="card p-6 rounded-2xl">
                     <h2 class="text-xl font-bold text-primary-color mb-4 flex items-center">
-                        <i data-lucide="layers-3" class="w-6 h-6 mr-3"></i>Paylaşılan Projeler
+                        <i data-lucide="layers-3" class="w-6 h-6 mr-3"></i>Shared Projects
                     </h2>
                     <div id="projects-feed" class="space-y-4 h-[300px] overflow-y-auto">
-                        <p class="text-text-secondary/80 italic text-center">Projeler yükleniyor...</p>
+                        <p class="text-text-secondary/80 italic text-center">Projects loading...</p>
                     </div>
                 </div>
 
-                <!-- Moderasyon Paneli (Sadece Moderatörler İçin) -->
+                <!-- Moderation Panel (For Moderators Only) -->
                 <div id="moderation-panel" class="card p-6 rounded-2xl bg-red-500/10 border-red-500/30 hidden">
                     <h2 class="text-lg font-bold text-red-500 mb-4 flex items-center">
-                        <i data-lucide="shield-alert" class="w-5 h-5 mr-2"></i>Moderatör Kontrol Paneli
+                        <i data-lucide="shield-alert" class="w-5 h-5 mr-2"></i>Moderator Control Panel
                     </h2>
-                    <p class="text-sm text-text-secondary mb-3">Yasaklamak veya yasağı kaldırmak için kullanıcının UID'sini girin.</p>
+                    <p class="text-sm text-text-secondary mb-3">Enter the user's UID to ban or unban.</p>
                     <div class="flex space-x-2">
-                        <input type="text" id="ban-uid-input" placeholder="Kullanıcı UID'si" class="input-field w-full p-2 rounded-xl text-sm bg-red-500/5">
+                        <input type="text" id="ban-uid-input" placeholder="User UID" class="input-field w-full p-2 rounded-xl text-sm bg-red-500/5">
                         <button id="ban-user-btn" class="bg-red-600 text-white font-semibold py-2 px-4 rounded-xl text-sm hover:bg-red-700" onclick="banUser(document.getElementById('ban-uid-input').value)">
-                            Yasakla
+                            Ban
                         </button>
                         <button id="unban-user-btn" class="bg-green-600 text-white font-semibold py-2 px-4 rounded-xl text-sm hover:bg-green-700" onclick="unbanUser(document.getElementById('ban-uid-input').value)">
-                            Yasağı Kaldır
+                            Unban
                         </button>
                     </div>
                     <div id="banned-users-list" class="mt-4 text-xs text-text-secondary">
-                        <!-- Yasaklı UID'ler buraya yüklenecek -->
-                        Yasaklı kullanıcı listesi yükleniyor...
+                        <!-- Banned UIDs will load here -->
+                        Banned users list loading...
                     </div>
                 </div>
             </div>
@@ -239,36 +239,36 @@
 
     </div>
 
-    <!-- Modal Konteynerleri -->
+    <!-- Modal Containers -->
 
-    <!-- 1. Kullanıcı Adı Belirleme Modalı (Sign-in/Register) -->
+    <!-- 1. Nickname Modal (Sign-in/Register) -->
     <div id="nickname-modal" class="fixed inset-0 hidden items-center justify-center p-4 modal-overlay">
         <div class="modal-content w-full max-w-md p-6 rounded-2xl text-center">
-            <h3 class="text-2xl font-bold text-primary-color mb-4">Kullanıcı Adınızı Belirleyin</h3>
+            <h3 class="text-2xl font-bold text-primary-color mb-4">Set Your Nickname</h3>
             <p class="text-sm text-text-secondary mb-6">
-                Codes Hub'a katılmak ve sohbet etmek için bir kullanıcı adı gereklidir.
+                A nickname is required to join Codes Hub and chat with the community.
             </p>
-            <input type="text" id="nickname-input" placeholder="Kullanıcı adı" class="input-field w-full p-3 rounded-xl mb-4 text-center text-base">
+            <input type="text" id="nickname-input" placeholder="Your Nickname" class="input-field w-full p-3 rounded-xl mb-4 text-center text-base">
             <button id="save-nickname-btn" class="btn-primary text-white font-bold py-3 w-full rounded-xl" onclick="saveNickname()">
-                Kaydet ve Giriş Yap
+                Save and Join
             </button>
             <p class="text-xs text-text-secondary mt-3">
-                Unutmayın: Bu, moderasyon yetkilerini denemek için giriş yapmanız gereken yerdir.
+                Note: This is also where you sign in to use moderator privileges.
             </p>
         </div>
     </div>
 
-    <!-- 2. Genel Mesaj Modalı (Alert/Confirm yerine) -->
+    <!-- 2. General Message Modal (Instead of Alert/Confirm) -->
     <div id="message-modal" class="fixed inset-0 hidden items-center justify-center p-4 modal-overlay">
         <div class="modal-content w-full max-w-sm p-6 rounded-2xl text-center">
-            <h3 id="msg-title" class="text-xl font-bold text-text-default mb-3">Başlık</h3>
+            <h3 id="msg-title" class="text-xl font-bold text-text-default mb-3">Title</h3>
             <p id="msg-body" class="text-sm text-text-secondary mb-6"></p>
             <div id="msg-actions" class="flex justify-center space-x-3">
                 <button id="msg-confirm" class="btn-secondary text-white font-semibold py-2 px-4 rounded-xl" onclick="closeMessageModal(true)">
-                    Tamam
+                    Confirm
                 </button>
                 <button id="msg-cancel" class="bg-gray-300 text-text-default font-semibold py-2 px-4 rounded-xl hover:bg-gray-400" onclick="closeMessageModal(false)">
-                    İptal
+                    Cancel
                 </button>
             </div>
         </div>
@@ -281,20 +281,20 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, addDoc, serverTimestamp, setLogLevel, arrayUnion, arrayRemove, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase global değişkenlerini ayarlama
+        // Firebase global variables
         let app, auth, db;
         let currentUserId = null;
         let currentUserNickname = null;
         let isModerator = false;
         let bannedUids = [];
 
-        // Örnek Kullanıcı Adları (Placeholder için)
-        const EXAMPLE_NICKNAMES = ["KodCanavarı", "PikselPilot", "ScratchKralı", "BlokUstası", "YazılımcıKedi"];
+        // Example Nicknames (for Placeholder)
+        const EXAMPLE_NICKNAMES = ["CodeWizard", "PixelPilot", "ScratchKing", "BlockMaster", "CoderCat"];
 
-        // Moderatör isimleri (gizli kalmalı)
+        // Moderator names (used for checking permissions)
         const MODERATOR_NAMES = ["EmirSeyfOS", "ScratchyXPlus", "ScratchMaster"];
 
-        // UI Elementleri
+        // UI Elements
         const authStatusEl = document.getElementById('auth-status');
         const userInfoEl = document.getElementById('user-info');
         const chatInput = document.getElementById('chat-input');
@@ -304,15 +304,13 @@
         const projectsFeed = document.getElementById('projects-feed');
         const chatMessagesEl = document.getElementById('chat-messages');
 
-        // --- GLOBAL YAPILANDIRMA RETRIEVAL ---
+        // --- GLOBAL CONFIGURATION RETRIEVAL ---
         const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'codes-hub-default';
-        const INITIAL_AUTH_TOKEN = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        let FIREBASE_CONFIG = null; // Başlangıçta null
 
-        // Genel koleksiyon yollarını almak için yardımcı program
+        // Helper to get public collection path
         const publicCollectionPath = (collectionName) => `/artifacts/${APP_ID}/public/data/${collectionName}`;
 
-        // --- MODAL İŞLEVLERİ (Alert/Confirm Yerine) ---
+        // --- MODAL FUNCTIONS (In place of Alert/Confirm) ---
 
         let modalResolve;
         function showMessageModal(title, body, type = 'alert') { // type: 'alert' | 'confirm'
@@ -323,7 +321,7 @@
             const cancelBtn = document.getElementById('msg-cancel');
 
             if (type === 'confirm') {
-                confirmBtn.textContent = 'Onayla';
+                confirmBtn.textContent = 'Confirm';
                 cancelBtn.classList.remove('hidden');
                 return new Promise(resolve => {
                     modalResolve = resolve;
@@ -331,7 +329,7 @@
                     document.getElementById('message-modal').classList.add('flex');
                 });
             } else {
-                confirmBtn.textContent = 'Kapat';
+                confirmBtn.textContent = 'Close';
                 cancelBtn.classList.add('hidden');
                 document.getElementById('message-modal').classList.remove('hidden');
                 document.getElementById('message-modal').classList.add('flex');
@@ -349,134 +347,119 @@
         }
 
 
-        // --- FIREBASE BAŞLATMA VE YENİDEN DENEME MEKANİZMASI (CRITICAL FIX) ---
-
-        const startAppInitialization = (retryCount = 0) => {
-            const MAX_RETRIES = 10;
-            const RETRY_DELAY = 500; // ms
-
-            // 1. Yapılandırmayı Kontrol Et
-            if (typeof __firebase_config !== 'undefined' && __firebase_config.length > 0) {
-                try {
-                    FIREBASE_CONFIG = JSON.parse(__firebase_config);
-                    // Başarılı! Firebase'i başlat
-                    initFirebase();
-                    return;
-
-                } catch (e) {
-                    // JSON parse hatası
-                    console.error("Firebase JSON parse hatası:", e);
-                    authStatusEl.textContent = "Hata: Firebase JSON Yapılandırması geçersiz.";
-                    return;
-                }
-            }
-            
-            // 2. Yapılandırma Eksikse Tekrar Dene
-            if (retryCount < MAX_RETRIES) {
-                authStatusEl.textContent = `Hata: Firebase yapılandırması eksik. Tekrar deneniyor (${retryCount + 1}/${MAX_RETRIES})...`;
-                setTimeout(() => startAppInitialization(retryCount + 1), RETRY_DELAY);
-            } else {
-                // Maksimum deneme sayısına ulaşıldı
-                authStatusEl.textContent = "Hata: Firebase yapılandırması eksik. Uygulama başlatılamıyor.";
-                console.error("FATAL: Firebase yapılandırması yüklenemedi.");
-            }
-        };
+        // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
 
         const initFirebase = async () => {
             setLogLevel('Debug');
             
+            // Critical Check: Ensure config string exists
+            if (typeof __firebase_config === 'undefined' || __firebase_config.length === 0) {
+                authStatusEl.textContent = "Error: Missing Firebase Configuration.";
+                console.error("FATAL: __firebase_config is missing or empty.");
+                return;
+            }
+
             try {
-                app = initializeApp(FIREBASE_CONFIG);
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+                app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // İlk Giriş İşlemi
-                let initialSignInPromise;
-                if (INITIAL_AUTH_TOKEN) {
-                    initialSignInPromise = signInWithCustomToken(auth, INITIAL_AUTH_TOKEN);
+                authStatusEl.textContent = "Connecting to Firebase...";
+
+                // Perform initial sign-in using the provided token or anonymously
+                let userPromise;
+                if (initialAuthToken) {
+                    console.log("Attempting sign-in with Custom Token.");
+                    userPromise = signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    initialSignInPromise = signInAnonymously(auth);
+                    console.log("Attempting Anonymous sign-in.");
+                    userPromise = signInAnonymously(auth);
                 }
 
-                await initialSignInPromise;
+                // Wait for the sign-in operation to complete
+                await userPromise;
+                authStatusEl.textContent = "Sign-in successful, loading user data...";
 
-                // Auth Durumu Değişikliklerini Dinle
+
+                // Set up the listener for state changes (this is the primary entry point for the app logic)
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         currentUserId = user.uid;
-                        userInfoEl.textContent = `Kullanıcı ID: ${currentUserId}`;
-
-                        // Kullanıcı bilgilerini ve yasaklı listesini yükle
-                        await loadUserInfo();
+                        userInfoEl.textContent = `User ID: ${currentUserId}`;
+                        console.log(`Auth successful. User UID: ${currentUserId}`);
                         
-                        // Kullanıcı yasaklı değilse sohbeti etkinleştir
+                        // Load user data and moderation status
+                        await loadUserInfo(); 
+                        
+                        // Check for ban status
                         if (!isUserBanned(currentUserId)) {
                             enableChat();
                         } else {
-                            disableChat("Yasaklandınız.");
+                            disableChat("You are banned.");
                         }
 
-                        // Moderatör paneli gösterimi
+                        // Show/Hide Moderator panel
                         if (isModerator) {
                             moderationPanel.classList.remove('hidden');
                         } else {
                             moderationPanel.classList.add('hidden');
                         }
                         
-                        // Proje ve Sohbet dinleyicilerini başlat
+                        // Start real-time listeners for chat and projects
                         setupListeners();
 
                     } else {
-                        // Kullanıcı çıkış yaptı veya oturum açmadı
+                        // User signed out or failed to sign in
+                        console.log("Auth state changed: User is null (signed out or failed).");
                         currentUserId = null;
                         currentUserNickname = null;
                         isModerator = false;
-                        userInfoEl.textContent = "Misafir";
-                        authStatusEl.textContent = "Giriş Yapılmadı";
-                        disableChat("Giriş Yapılmadı");
+                        userInfoEl.textContent = "Guest";
+                        authStatusEl.textContent = "Signed Out";
+                        disableChat("Signed Out");
                     }
                 });
-
-                authStatusEl.textContent = "Firebase Bağlantısı Başarılı";
-
+                
             } catch (error) {
-                console.error("Firebase Başlatma Hatası:", error);
-                authStatusEl.textContent = "Hata: Giriş Başarısız.";
-                showMessageModal("Hata", `Giriş işlemi sırasında bir hata oluştu: ${error.message}`, 'alert');
+                console.error("Firebase Initialization or Sign-in Error:", error);
+                authStatusEl.textContent = "Error: Sign-in Failed. Check Console.";
+                showMessageModal("Error", `Initialization or Sign-in failed: ${error.message}`, 'alert');
             }
         };
 
-        // --- KULLANICI BİLGİLERİ VE MODERASYON ---
+        // --- USER INFO AND MODERATION ---
 
         const loadUserInfo = async () => {
             if (!currentUserId) return;
 
-            // 1. Kullanıcı Adını Yükle
+            // 1. Load Nickname
             const nicknameDocRef = doc(db, publicCollectionPath('usernames'), currentUserId);
             const nicknameDoc = await getDoc(nicknameDocRef);
 
-            if (nicknameDoc.exists()) { // Düzeltildi: DocumentSnapshot için exists() kullanılır
+            if (nicknameDoc.exists()) { // CRITICAL FIX: Use .exists() for DocumentSnapshot
                 currentUserNickname = nicknameDoc.data().nickname;
-                // Moderatör kontrolü
+                // Check for moderator status
                 isModerator = MODERATOR_NAMES.includes(currentUserNickname);
-                authStatusEl.textContent = isModerator ? `Moderatör: ${currentUserNickname}` : `Hoş Geldin, ${currentUserNickname}`;
+                authStatusEl.textContent = isModerator ? `Moderator: ${currentUserNickname}` : `Welcome, ${currentUserNickname}`;
             } else {
-                // Kullanıcı adı yoksa modalı göster (Sign-in/Register)
+                // If no nickname, show the modal
                 showNicknameModal();
             }
 
-            // 2. Yasaklı Kullanıcı Listesini Yükle (Sadece bir kez)
+            // 2. Load Banned User List (initial check, listener handles updates)
             const banDocRef = doc(db, publicCollectionPath('moderation'), 'banned_users');
             const banDoc = await getDoc(banDocRef);
             
             if (banDoc.exists()) {
                 bannedUids = banDoc.data().uids || [];
             } else {
-                // Eğer döküman yoksa oluştur
+                // Create document if it doesn't exist
                 await setDoc(banDocRef, { uids: [] });
             }
 
-            // Arayüzdeki yasaklı listeyi güncelle
             updateBannedListUI();
         };
 
@@ -494,11 +477,10 @@
             const nickname = nicknameInput.value.trim();
 
             if (nickname.length < 3 || nickname.length > 20) {
-                showMessageModal("Hata", "Kullanıcı adı 3 ile 20 karakter arasında olmalıdır.", 'alert');
+                showMessageModal("Error", "Nickname must be between 3 and 20 characters.", 'alert');
                 return;
             }
 
-            // Kullanıcı adını Firestore'a kaydet
             try {
                 const nicknameDocRef = doc(db, publicCollectionPath('usernames'), currentUserId);
                 await setDoc(nicknameDocRef, { nickname: nickname, uid: currentUserId, createdAt: serverTimestamp() });
@@ -513,18 +495,18 @@
                     enableChat();
                 }
 
-                authStatusEl.textContent = isModerator ? `Moderatör: ${currentUserNickname}` : `Hoş Geldin, ${currentUserNickname}`;
+                authStatusEl.textContent = isModerator ? `Moderator: ${currentUserNickname}` : `Welcome, ${currentUserNickname}`;
 
             } catch (error) {
-                console.error("Kullanıcı adı kaydetme hatası:", error);
-                showMessageModal("Hata", "Kullanıcı adı kaydedilemedi. Lütfen tekrar deneyin.", 'alert');
+                console.error("Nickname save error:", error);
+                showMessageModal("Error", "Could not save nickname. Please try again.", 'alert');
             }
         };
         
         const enableChat = () => {
             chatInput.disabled = false;
             sendChatBtn.disabled = false;
-            chatErrorEl.textContent = `Sohbete ${currentUserNickname} olarak katıldınız.`;
+            chatErrorEl.textContent = `Joined chat as ${currentUserNickname}.`;
             chatErrorEl.classList.add('text-primary-color');
             chatErrorEl.classList.remove('text-text-secondary');
         };
@@ -532,7 +514,7 @@
         const disableChat = (reason) => {
             chatInput.disabled = true;
             sendChatBtn.disabled = true;
-            chatErrorEl.textContent = reason || "Sohbete katılamıyorsunuz.";
+            chatErrorEl.textContent = reason || "Cannot join chat.";
             chatErrorEl.classList.remove('text-primary-color');
             chatErrorEl.classList.add('text-red-500');
         };
@@ -540,52 +522,52 @@
         const updateBannedListUI = () => {
             const listEl = document.getElementById('banned-users-list');
             if (bannedUids.length === 0) {
-                listEl.innerHTML = 'Şu anda yasaklı kullanıcı yok.';
+                listEl.innerHTML = 'No users are currently banned.';
             } else {
-                listEl.innerHTML = `<p class="font-semibold">Yasaklı UID'ler (${bannedUids.length}):</p><ul>` + 
+                listEl.innerHTML = `<p class="font-semibold">Banned UIDs (${bannedUids.length}):</p><ul>` + 
                                    bannedUids.map(uid => `<li class="font-mono text-xs break-all">${uid}</li>`).join('') +
                                    '</ul>';
             }
         };
 
         const banUser = async (uidToBan) => {
-            if (!isModerator) return showMessageModal("Yetki Hatası", "Bu işlemi yapmak için moderatör olmalısınız.", 'alert');
+            if (!isModerator) return showMessageModal("Permission Denied", "You must be a moderator to perform this action.", 'alert');
             uidToBan = uidToBan.trim();
-            if (!uidToBan) return showMessageModal("Hata", "Lütfen yasaklanacak bir UID girin.", 'alert');
+            if (!uidToBan) return showMessageModal("Error", "Please enter a UID to ban.", 'alert');
             
-            const confirmed = await showMessageModal("Onay", `Kullanıcı ID: ${uidToBan}'i yasaklamak istediğinizden emin misiniz?`, 'confirm');
+            const confirmed = await showMessageModal("Confirmation", `Are you sure you want to ban user ID: ${uidToBan}?`, 'confirm');
             if (!confirmed) return;
 
             try {
                 const banDocRef = doc(db, publicCollectionPath('moderation'), 'banned_users');
                 await updateDoc(banDocRef, { uids: arrayUnion(uidToBan) });
-                showMessageModal("Başarılı", `${uidToBan} başarıyla yasaklandı.`, 'alert');
+                showMessageModal("Success", `${uidToBan} has been successfully banned.`, 'alert');
             } catch (error) {
-                console.error("Yasaklama hatası:", error);
-                showMessageModal("Hata", `Yasaklama başarısız oldu: ${error.message}`, 'alert');
+                console.error("Ban error:", error);
+                showMessageModal("Error", `Ban failed: ${error.message}`, 'alert');
             }
         };
 
         const unbanUser = async (uidToUnban) => {
-            if (!isModerator) return showMessageModal("Yetki Hatası", "Bu işlemi yapmak için moderatör olmalısınız.", 'alert');
+            if (!isModerator) return showMessageModal("Permission Denied", "You must be a moderator to perform this action.", 'alert');
             uidToUnban = uidToUnban.trim();
-            if (!uidToUnban) return showMessageModal("Hata", "Lütfen yasağı kaldırılacak bir UID girin.", 'alert');
+            if (!uidToUnban) return showMessageModal("Error", "Please enter a UID to unban.", 'alert');
 
-            const confirmed = await showMessageModal("Onay", `Kullanıcı ID: ${uidToUnban}'in yasağını kaldırmak istediğinizden emin misiniz?`, 'confirm');
+            const confirmed = await showMessageModal("Confirmation", `Are you sure you want to unban user ID: ${uidToUnban}?`, 'confirm');
             if (!confirmed) return;
 
             try {
                 const banDocRef = doc(db, publicCollectionPath('moderation'), 'banned_users');
                 await updateDoc(banDocRef, { uids: arrayRemove(uidToUnban) });
-                showMessageModal("Başarılı", `${uidToUnban} kullanıcısının yasağı kaldırıldı.`, 'alert');
+                showMessageModal("Success", `User ${uidToUnban} has been unbanned.`, 'alert');
             } catch (error) {
-                console.error("Yasağı kaldırma hatası:", error);
-                showMessageModal("Hata", `Yasağı kaldırma başarısız oldu: ${error.message}`, 'alert');
+                console.error("Unban error:", error);
+                showMessageModal("Error", `Unban failed: ${error.message}`, 'alert');
             }
         };
 
 
-        // --- PROJE VE SOHBET İŞLEVLERİ ---
+        // --- PROJECT AND CHAT FUNCTIONALITY ---
 
         const loadProject = () => {
             const urlInput = document.getElementById('project-url').value;
@@ -595,9 +577,9 @@
 
             let projectId = null;
 
-            // Scratch URL'den ID çıkarma
+            // Extract ID from Scratch URL
             const scratchMatch = urlInput.match(/scratch\.mit\.edu\/projects\/(\d+)/);
-            // TurboWarp URL'den ID çıkarma
+            // Extract ID from TurboWarp URL
             const turbowarpMatch = urlInput.match(/turbowarp\.org\/(\d+)/);
 
             if (scratchMatch) {
@@ -605,7 +587,7 @@
             } else if (turbowarpMatch) {
                 projectId = turbowarpMatch[1];
             } else {
-                container.innerHTML = `<p id="player-placeholder" class="absolute inset-0 flex items-center justify-center text-red-500/70 text-center p-8">Geçersiz Scratch veya TurboWarp proje URL formatı.</p>`;
+                container.innerHTML = `<p id="player-placeholder" class="absolute inset-0 flex items-center justify-center text-red-500/70 text-center p-8">Invalid Scratch or TurboWarp project URL format.</p>`;
                 shareBtn.disabled = true;
                 return;
             }
@@ -613,18 +595,21 @@
             const embedUrl = `https://turbowarp.org/${projectId}/embed`;
 
             container.innerHTML = `<iframe src="${embedUrl}" allowtransparency="true" allowfullscreen="true" scrolling="no" frameborder="0"></iframe>`;
-            placeholder.remove();
+            // Attempt to remove placeholder if it exists
+            const currentPlaceholder = document.getElementById('player-placeholder');
+            if (currentPlaceholder) currentPlaceholder.remove();
+            
             shareBtn.disabled = false;
         };
         
         const shareProject = async () => {
-            if (!currentUserNickname) return showMessageModal("Hata", "Önce bir kullanıcı adı belirlemelisiniz.", 'alert');
+            if (!currentUserNickname) return showMessageModal("Error", "You must set a nickname first.", 'alert');
 
             const url = document.getElementById('project-url').value;
             const title = document.getElementById('project-title').value.trim();
             const description = document.getElementById('project-description').value.trim();
             
-            if (!url || !title) return showMessageModal("Hata", "Lütfen URL ve Başlık giriniz.", 'alert');
+            if (!url || !title) return showMessageModal("Error", "Please enter the URL and Title.", 'alert');
 
             const newProject = {
                 url,
@@ -633,21 +618,21 @@
                 authorUid: currentUserId,
                 authorNickname: currentUserNickname,
                 createdAt: serverTimestamp(),
-                summary: "Özet bekleniyor..."
+                summary: "Summary pending..."
             };
 
             try {
                 await addDoc(collection(db, publicCollectionPath('projects')), newProject);
-                showMessageModal("Başarılı", "Projeniz Codes Hub'da paylaşıldı!", 'alert');
+                showMessageModal("Success", "Your project has been shared on Codes Hub!", 'alert');
                 
-                // Formu temizle
+                // Clear form
                 document.getElementById('project-url').value = '';
                 document.getElementById('project-title').value = '';
                 document.getElementById('project-description').value = '';
                 document.getElementById('share-project-btn').disabled = true;
             } catch (error) {
-                console.error("Proje paylaşım hatası:", error);
-                showMessageModal("Hata", `Proje paylaşılırken bir hata oluştu: ${error.message}`, 'alert');
+                console.error("Project share error:", error);
+                showMessageModal("Error", `An error occurred while sharing the project: ${error.message}`, 'alert');
             }
         };
 
@@ -669,34 +654,42 @@
             try {
                 await addDoc(collection(db, publicCollectionPath('chat')), newMessage);
                 input.value = '';
-                // Sohbeti en aşağı kaydır
+                // Scroll to bottom
                 chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
             } catch (error) {
-                console.error("Mesaj gönderme hatası:", error);
-                showMessageModal("Hata", `Mesaj gönderilemedi: ${error.message}`, 'alert');
+                console.error("Send message error:", error);
+                showMessageModal("Error", `Could not send message: ${error.message}`, 'alert');
             }
         };
+        
+        // Allow sending message with Enter key
+        chatInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && !sendChatBtn.disabled) {
+                sendMessage();
+            }
+        });
 
-        // --- YAPAY ZEKA ÖZETLEME İŞLEVİ ---
+
+        // --- AI SUMMARIZATION FUNCTION ---
 
         const summarizeProject = async (projectId, title, description) => {
             const projectDocRef = doc(db, publicCollectionPath('projects'), projectId);
             
-            // Kullanıcıya bir geri bildirim göster
-            updateDoc(projectDocRef, { summary: "Özet oluşturuluyor..." });
+            // Give user feedback
+            updateDoc(projectDocRef, { summary: "Generating summary..." });
 
-            const systemPrompt = "Sen, Scratch projelerini Türkçeye özetleyen bir yapay zekasın. Yalnızca verilen başlık ve açıklama için kısa, 2-3 cümlelik akıcı bir Türkçe özet hazırla. Ek bilgi verme.";
-            const userQuery = `Proje Başlığı: "${title}"\nProje Açıklaması: "${description}"\n\nBu projeyi özetle.`;
+            const systemPrompt = "You are an AI specialized in summarizing Scratch projects in English. Provide a concise, 2-3 sentence, fluent English summary based only on the provided title and description. Do not add any extra information.";
+            const userQuery = `Project Title: "${title}"\nProject Description: "${description}"\n\nSummarize this project.`;
             const apiKey = ""
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             
-            // İstek yükünü oluştur
+            // Construct the request payload
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
             };
 
-            // API Çağrısı (Exponential Backoff ile)
+            // API Call (with Exponential Backoff)
             const MAX_API_RETRIES = 5;
             let currentDelay = 1000;
 
@@ -710,37 +703,37 @@
 
                     if (!response.ok) {
                         if (response.status === 429 && i < MAX_API_RETRIES - 1) {
-                            // Rate limit hatası, tekrar dene
-                            console.warn(`API Rate Limit hatası. ${currentDelay / 1000} saniye sonra tekrar deneniyor...`);
+                            // Rate limit error, retry
+                            console.warn(`API Rate Limit error. Retrying in ${currentDelay / 1000} seconds...`);
                             await new Promise(resolve => setTimeout(resolve, currentDelay));
                             currentDelay *= 2;
                             continue;
                         }
-                        throw new Error(`API çağrısı başarısız oldu: ${response.statusText}`);
+                        throw new Error(`API call failed: ${response.statusText}`);
                     }
 
                     const result = await response.json();
-                    const summaryText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Özet oluşturulamadı.";
+                    const summaryText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Could not generate summary.";
 
-                    // Firestore'a kaydet
+                    // Save to Firestore
                     await updateDoc(projectDocRef, { summary: summaryText });
                     return;
 
                 } catch (error) {
-                    console.error("Özetleme API hatası:", error);
-                    // Firestore'a hata mesajı kaydet
-                    await updateDoc(projectDocRef, { summary: "Hata: Özetlenemedi." });
+                    console.error("Summarization API error:", error);
+                    // Save error message to Firestore
+                    await updateDoc(projectDocRef, { summary: "Error: Failed to summarize." });
                     return;
                 }
             }
-            // Tüm denemeler başarısız oldu
-            await updateDoc(projectDocRef, { summary: "Hata: Ağ hatası nedeniyle özetlenemedi." });
+            // All attempts failed
+            await updateDoc(projectDocRef, { summary: "Error: Failed to summarize due to network issue." });
         };
 
-        // --- FIRESTORE DINLEYICILERI (LISTENERS) ---
+        // --- FIRESTORE LISTENERS ---
 
         const setupListeners = () => {
-            // 1. Sohbet Dinleyicisi
+            // 1. Chat Listener
             const chatQuery = query(collection(db, publicCollectionPath('chat')));
             onSnapshot(chatQuery, (snapshot) => {
                 const messages = [];
@@ -753,7 +746,7 @@
                 renderChat(messages);
             });
             
-            // 2. Projeler Akışı Dinleyicisi
+            // 2. Projects Feed Listener
             const projectsQuery = query(collection(db, publicCollectionPath('projects')));
             onSnapshot(projectsQuery, (snapshot) => {
                 const projects = [];
@@ -761,30 +754,30 @@
                     projects.push({ id: doc.id, ...doc.data() });
                 });
                 
-                // En son paylaşılanı en üstte göster
+                // Show most recently shared first
                 projects.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
                 renderProjects(projects);
             });
 
-            // 3. Yasaklı Kullanıcı Dinleyicisi (Moderatör Paneli İçin)
+            // 3. Banned User Listener (For Moderator Panel)
             const banDocRef = doc(db, publicCollectionPath('moderation'), 'banned_users');
             onSnapshot(banDocRef, (docSnap) => {
                 if (docSnap.exists()) {
                     bannedUids = docSnap.data().uids || [];
                     updateBannedListUI();
-                    // Eğer kullanıcı banlanırsa, sohbeti devre dışı bırak
+                    // If user gets banned, disable chat immediately
                     if (isUserBanned(currentUserId)) {
-                        disableChat("Yasaklandınız.");
+                        disableChat("You are banned.");
                     } else if (currentUserNickname) {
-                        // Ban kaldırılırsa sohbeti etkinleştir
+                        // If unbanned, re-enable chat
                         enableChat();
                     }
                 }
             });
         };
 
-        // --- RENDER FONKSİYONLARI ---
+        // --- RENDER FUNCTIONS ---
 
         const renderChat = (messages) => {
             chatMessagesEl.innerHTML = '';
@@ -800,76 +793,80 @@
                 let timestampText = '';
                 if (msg.timestamp) {
                     const date = msg.timestamp.toDate();
-                    timestampText = date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                    timestampText = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 }
 
                 chatMessagesEl.innerHTML += `
                     <div class="flex flex-col ${isMyMessage ? 'items-end' : 'items-start'}">
                         <div class="${baseClasses} ${alignmentClasses} shadow-sm relative">
                             <span class="${nicknameClasses} text-xs block mb-0.5 ${isMyMessage ? 'text-white/80' : ''}">
-                                ${msg.nickname} ${isBanned ? '(Yasaklı)' : ''}
+                                ${msg.nickname} ${isBanned ? '(Banned)' : ''}
                             </span>
                             <p class="text-sm break-words">${msg.text}</p>
                             <span class="text-xs mt-1 block ${isMyMessage ? 'text-white/60' : 'text-text-secondary'}">${timestampText}</span>
                             
-                            ${isModerator && !isMyMessage ? `<button onclick="banUser('${msg.uid}')" class="absolute -right-12 top-1/2 -translate-y-1/2 text-xs bg-red-100 text-red-600 p-1 rounded-full opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">(Yasakla)</button>` : ''}
+                            ${isModerator && !isMyMessage ? `<button onclick="banUser('${msg.uid}')" class="absolute -right-16 top-1/2 -translate-y-1/2 text-xs bg-red-100 text-red-600 p-1 rounded-full opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap">(Ban User)</button>` : ''}
                         </div>
                     </div>
                 `;
             });
-            // Yeni mesaj geldiğinde en alta kaydır
+            // Scroll to bottom on new message
             chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
         };
 
         const renderProjects = (projects) => {
             projectsFeed.innerHTML = '';
             if (projects.length === 0) {
-                projectsFeed.innerHTML = `<p class="text-text-secondary/80 italic text-center p-4">Henüz paylaşılmış bir proje yok. İlk siz olun!</p>`;
+                projectsFeed.innerHTML = `<p class="text-text-secondary/80 italic text-center p-4">No projects shared yet. Be the first!</p>`;
                 return;
             }
 
             projects.forEach(project => {
                 const isMyProject = project.authorUid === currentUserId;
                 
+                // Escape quotes for onclick function
+                const safeTitle = project.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                const safeDescription = project.description.replace(/'/g, "\\'").replace(/"/g, '\\"');
+
                 projectsFeed.innerHTML += `
                     <div class="p-4 card rounded-xl shadow-sm hover:shadow-md transition duration-200 border-l-4 ${isMyProject ? 'border-secondary-color' : 'border-primary-color'}">
                         <div class="flex justify-between items-start mb-2">
                             <h4 class="font-bold text-base break-words">${project.title}</h4>
                             <span class="text-xs text-text-secondary ml-3 whitespace-nowrap">
-                                ${project.createdAt ? project.createdAt.toDate().toLocaleDateString('tr-TR') : ''}
+                                ${project.createdAt ? project.createdAt.toDate().toLocaleDateString('en-US') : ''}
                             </span>
                         </div>
-                        <p class="text-sm text-text-secondary mb-3">${project.authorNickname} tarafından paylaşıldı.</p>
+                        <p class="text-sm text-text-secondary mb-3">Shared by ${project.authorNickname}.</p>
                         
                         <div class="bg-bg-default p-3 rounded-lg border border-border-color/50 mb-3">
                              <p class="text-xs font-medium text-text-secondary mb-1 flex items-center">
-                                <i data-lucide="zap" class="w-4 h-4 mr-1 text-secondary-color"></i> YZ Özeti:
+                                <i data-lucide="zap" class="w-4 h-4 mr-1 text-secondary-color"></i> AI Summary:
                              </p>
                              <p class="text-sm italic text-text-default">${project.summary}</p>
                         </div>
 
                         <div class="flex space-x-2 mt-3">
                             <a href="${project.url}" target="_blank" class="text-xs font-semibold text-white bg-primary-color py-1.5 px-3 rounded-full hover:bg-primary-color/80 flex items-center">
-                                <i data-lucide="external-link" class="w-4 h-4 mr-1"></i> Projeye Git
+                                <i data-lucide="external-link" class="w-4 h-4 mr-1"></i> Go to Project
                             </a>
-                            <button onclick="summarizeProject('${project.id}', '${project.title.replace(/'/g, "\\'")}', '${project.description.replace(/'/g, "\\'")}')" 
+                            <button onclick="summarizeProject('${project.id}', '${safeTitle}', '${safeDescription}')" 
                                     class="text-xs font-semibold text-white bg-secondary-color py-1.5 px-3 rounded-full hover:bg-secondary-color/80 flex items-center">
-                                <i data-lucide="wand-2" class="w-4 h-4 mr-1"></i> YZ Özeti Oluştur
+                                <i data-lucide="wand-2" class="w-4 h-4 mr-1"></i> Generate AI Summary
                             </button>
                         </div>
                     </div>
                 `;
             });
-            // Lucide ikonlarını yeniden render et
+            // Re-render Lucide icons
             lucide.createIcons();
         };
 
-        // --- BAŞLANGIÇ ---
-        // Uygulama yüklenir yüklenmez Firebase başlatma işlemini başlat.
+        // --- STARTUP ---
+        // Initialize Firebase on window load.
         window.onload = () => {
-             // Lucide ikonlarını yükle
+             // Load Lucide icons
             lucide.createIcons();
-            startAppInitialization();
+            initFirebase();
         };
 
     </script>
